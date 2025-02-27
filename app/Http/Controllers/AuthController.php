@@ -31,6 +31,8 @@ class AuthController extends Controller
                 'token' => $user->createToken('YourAppName')->plainTextToken,
                 'id'    => $user->id,
                 'full_name'  => optional($user->account)->full_name,
+                'school_number'  => optional($user->account)->school_number,
+                'photo'  => optional($user->account)->photo,
                 'role'  => $user->role
             ], 200);
 

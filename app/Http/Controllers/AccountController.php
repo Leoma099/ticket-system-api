@@ -66,6 +66,11 @@ class AccountController extends Controller
     public function show($id)
     {
         $account = Account::with('user', 'schoolNumber')->findOrFail($id);
+
+        if ($account->photo) {
+            $account->photo = asset('storage/' . $account->photo);
+        }
+
         return response()->json($account);
     }
 
