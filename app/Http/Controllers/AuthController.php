@@ -16,17 +16,10 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $user = User::where('username', $request->username)
-            ->with('account') // Fetch account details automatically
-            ->first();    
+        $user = User::where('username', $request->username)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
-        }
-
-        // ✅ ADD THIS CHECK
-        if (!$user->account) {
-            return response()->json(['error' => 'User has no account associated. Please contact support.'], 400);
         }
 
         $token = $user->createToken('auth-token')->plainTextToken;
