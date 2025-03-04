@@ -15,16 +15,15 @@ class CreateAccountsTable extends Migration
     {
         Schema::create('accounts', function (Blueprint $table) {
             $table->bigIncrements('id');
-
-            $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('school_number_id');
-
+            $table->unsignedBigInteger('user_id')->unique()->change();
             $table->string('full_name');
-            $table->string('email')->nullable();
-            $table->date('date_of_birth')->nullable();
-            $table->string('address')->nullable();
-            $table->string('mobile_number')->nullable();
+            $table->string('email');
+            $table->date('date_of_birth');
+            $table->string('address');
+            $table->string('mobile_number');
             $table->longText('photo')->nullable();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
 
             $table->timestamps();
         });

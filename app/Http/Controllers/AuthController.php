@@ -11,7 +11,6 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        // Validate incoming request
         $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
@@ -19,24 +18,32 @@ class AuthController extends Controller
 
         $user = User::where('username', $request->username)
             ->with('account') // Fetch account details automatically
-            ->first();
+            ->first();    
 
-            if (!$user) {
-                return response()->json(['error' => 'User not found'], 404);
-            }
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json(['error' => 'Invalid credentials'], 401);
+        }
 
-            \Log::info('User found:', ['user' => $user]);
+        // ✅ ADD THIS CHECK
+        if (!$user->account) {
+            return response()->json(['error' => 'User has no account associated. Please contact support.'], 400);
+        }
 
-            return response()->json([
-                'token' => $user->createToken('YourAppName')->plainTextToken,
-                'id'    => $user->id,
-                'full_name'  => optional($user->account)->full_name,
-                'school_number'  => optional($user->account)->school_number,
-                'photo'  => optional($user->account)->photo,
-                'role'  => $user->role
-            ], 200);
+        $token = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json(['error' => 'Unauthorized'], 401);
+        return response()->json([
+            'token' => $token,
+            'id' => $user->id,
+            'full_name' => optional($user->account)->full_name,
+            'photo' => optional($user->account)->photo,
+            'role' => $user->role,
+        ], 200);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json(['message' => 'Logged out successfully'], 200);
     }
 };
 

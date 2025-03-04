@@ -54,12 +54,14 @@ class MyAccountController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
+        // Load account and school number relationship
+        $user->load('account.schoolNumber');
+
         return response()->json([
             'id' => $user->id,
             'account_id' => $user->account ? $user->account->id : null,
-            'full_name' => $user->account ? $user->account->full_name : null,
-            'school_number' => $user->account ? $user->account->school_number : null,
             'username' => $user->username,
+            'full_name' => $user->account ? $user->account->full_name : null,
         ]);
     }
 }

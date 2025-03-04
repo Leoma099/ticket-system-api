@@ -10,6 +10,7 @@ class Ticket extends Model
     use HasFactory;
 
     protected $fillable = [
+        'account_id',
         'full_name',
         'school_number',
         'department',
@@ -20,5 +21,17 @@ class Ticket extends Model
         'request_date',
         'completed_date',
         'photo',
+        'assigned_by',
     ];
+
+    public function account()
+    {
+        return $this->hasOne(Account::class, 'user_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
 }

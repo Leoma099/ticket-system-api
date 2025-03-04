@@ -12,7 +12,6 @@ class Account extends Model
 
     protected $fillable = [
         'user_id',
-        'school_number_id',
         'full_name',
         'email',
         'date_of_birth',
@@ -26,8 +25,14 @@ class Account extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function schoolNumber()
+    public function getPhotoAttribute($value)
     {
-        return $this->belongsTo(SchoolNumber::class);
+        // Ensure it only prepends "uploads/photos/" if it's not already included
+        if ($value && !str_starts_with($value, 'uploads/photos/')) {
+            return "uploads/photos/" . $value;
+        }
+        
+        return $value;
     }
+
 }

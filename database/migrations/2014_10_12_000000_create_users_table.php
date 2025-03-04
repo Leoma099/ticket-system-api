@@ -18,7 +18,6 @@ class CreateUsersTable extends Migration
             $table->string('username')->unique();
             $table->text('password');
             $table->tinyInteger('role');
-            $table->tinyInteger('locked')->default('0');
 
             $table->timestamps();
         });

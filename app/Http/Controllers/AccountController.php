@@ -12,7 +12,7 @@ class AccountController extends Controller
 {
     public function index(Request $request)
     {
-        $accounts = Account::with('user','schoolNumber')->get();
+        $accounts = Account::with('user')->get();
         return response()->json($accounts);
     }
 
@@ -38,17 +38,11 @@ class AccountController extends Controller
         $user = User::create([
             'username' => $request->username,
             'password' => Hash::make($request->password),
-            'role' => 3, // Default is User (3)
-            'locked' => 0, // Default is Active (0)
-        ]);
-
-        $school_number = SchoolNumber::create([
-            'number' => $request->number,
+            'role' => $request->role, // Default is User (3)
         ]);
 
         $account = Account::create([
             'user_id' => $user->id,
-            'school_number_id' => $school_number->id,
             'full_name' => $request->full_name,
             'email' => $request->email,
             'address' => $request->address,
@@ -66,13 +60,15 @@ class AccountController extends Controller
     public function show($id)
     {
         $account = Account::with('user', 'schoolNumber')->findOrFail($id);
-
+    
+        // Remove "public/" from the photo path if stored with "public/uploads/photos/filename.jpg"
         if ($account->photo) {
-            $account->photo = asset('storage/' . $account->photo);
-        }
-
+            $account->photo = str_replace('storage/uploads/photos/', 'uploads/photos/', $account->photo);
+        }        
+    
         return response()->json($account);
     }
+    
 
     public function update(Request $request, Account $account)
     {
@@ -84,12 +80,17 @@ class AccountController extends Controller
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
+        // ✅ Delete old photo if new one is uploaded
         if ($request->hasFile('photo')) {
+            if ($account->photo) {
+                Storage::disk('public')->delete($account->photo);
+            }
             $photoPath = $request->file('photo')->store('uploads/photos', 'public');
             $account->update(['photo' => $photoPath]);
         }
 
         $account->update($request->except('photo'));
+        
         return response()->json(['message' => 'Account updated successfully', 'account' => $account]);
     }
 

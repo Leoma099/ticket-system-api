@@ -17,6 +17,11 @@ class User extends Authenticatable // Change from Model to Authenticatable
 
     public function account()
     {
-        return $this->hasOne(Account::class, 'user_id', 'id');
+        return $this->hasOne(Account::class, 'user_id'); // Ensure 'user_id' is the correct foreign key
+    }
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
     }
 }
