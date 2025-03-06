@@ -10,6 +10,7 @@ use App\Models\SchoolNumber;
 
 class TicketController extends Controller
 {
+
     // Get all tickets
     public function index(Request $request)
     {
@@ -132,6 +133,7 @@ class TicketController extends Controller
     public function update(Request $request, $id)
     {
         $user = $request->user(); // Get authenticated user
+
         if (!$user) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }

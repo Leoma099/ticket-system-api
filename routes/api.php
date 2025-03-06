@@ -48,3 +48,8 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::post('login', [AuthController::class, 'login']);
+
+Route::get('login', function()
+{
+    return abort(401, 'Invalid access.');
+})->name('login');
