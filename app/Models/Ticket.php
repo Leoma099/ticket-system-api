@@ -11,6 +11,7 @@ class Ticket extends Model
 
     protected $fillable = [
         'account_id',
+        'ticket_order',
         'full_name',
         'department',
         'subject',

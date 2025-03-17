@@ -65,6 +65,7 @@ class TicketController extends Controller
         // Fix the account_id assignment
         $ticket = Ticket::create([
             'account_id' => $user->account->id, // ✅ Fixed!
+            'ticket_order' => $request->ticket_order,
             'full_name' => $request->full_name,
             'department' => $request->department,
             'subject' => $request->subject,
@@ -104,6 +105,7 @@ class TicketController extends Controller
 
         $ticket = Ticket::create([
             'account_id' => $request->account_id,
+            'ticket_order' => $request->ticket_order,
             'full_name' => $request->full_name,
             'department' => $request->department,
             'subject' => $request->subject,

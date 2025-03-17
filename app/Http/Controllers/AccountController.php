@@ -24,7 +24,7 @@ class AccountController extends Controller
             'mobile_number' => 'required',
             'username' => 'required|unique:users',
             'password' => 'required|min:6',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'photo' => 'nullable|image',
             'date_of_birth' => 'required|date',
         ]);
 
