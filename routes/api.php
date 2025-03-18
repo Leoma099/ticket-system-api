@@ -6,6 +6,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\MyAccountController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,6 +42,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/myaccount/{id}', [MyAccountController::class, 'update']);
     Route::delete('/myaccount/{id}', [MyAccountController::class, 'destroy']);
     Route::get('/myaccount', [MyAccountController::class, 'me']);
+
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications', [NotificationController::class, 'store']);
+    Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
 
     Route::post('logout', [AuthController::class, 'logout']);
 

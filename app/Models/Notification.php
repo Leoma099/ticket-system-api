@@ -11,16 +11,13 @@ class Notification extends Model
 
     protected $fillable = [
         'account_id',
+        'title',
         'message',
+        'is_read'
     ];
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
 
     public function account()
     {
-        return $this->hasOne(Account::class, 'user_id');
+        return $this->hasOne(Account::class, 'account_id');
     }
 }
