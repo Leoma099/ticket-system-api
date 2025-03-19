@@ -26,6 +26,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/account', [AccountController::class, 'store']);
     Route::put('/account/{id}', [AccountController::class, 'update']);
     Route::delete('/account/{id}', [AccountController::class, 'destroy']);
+    Route::get('/staff-accounts', [AccountController::class, 'getStaffWithTicketStats']);
+
 
     Route::get('/ticket', [TicketController::class, 'index']);
     Route::get('/ticket/{id}', [TicketController::class, 'show']);

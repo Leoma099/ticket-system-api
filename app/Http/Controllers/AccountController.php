@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\User;
+use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -101,5 +102,28 @@ class AccountController extends Controller
         $account->delete();
     
         return response()->json(['message' => 'Account deleted successfully']);
+    }
+
+    public function getStaffWithTicketStats()
+    {
+        $staffAccounts = Account::with('user')
+            ->whereHas('user', function ($query) {
+                $query->where('role', 2); // Only staff
+            })
+            ->get()
+            ->map(function ($account) {
+                $assigned = Ticket::where('assigned_by', $account->user_id)->count();
+                $resolved = Ticket::where('assigned_by', $account->user_id)
+                                ->where('status', 3) // assuming 3 = resolved
+                                ->count();
+
+                return [
+                    'full_name' => $account->full_name,
+                    'assigned' => $assigned,
+                    'resolved' => $resolved,
+                ];
+            });
+
+        return response()->json($staffAccounts);
     }
 }
