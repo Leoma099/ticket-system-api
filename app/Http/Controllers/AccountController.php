@@ -126,4 +126,16 @@ class AccountController extends Controller
 
         return response()->json($staffAccounts);
     }
+
+    public function getStaffDataInfo()
+    {
+        $staff = Account::with('user') // Eager load user data
+            ->whereHas('user', function ($query) {
+                $query->where('role', 2); // Only fetch staff accounts
+            })
+            ->get();
+    
+        return response()->json($staff);
+    }
+
 }

@@ -27,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/account/{id}', [AccountController::class, 'update']);
     Route::delete('/account/{id}', [AccountController::class, 'destroy']);
     Route::get('/staff-accounts', [AccountController::class, 'getStaffWithTicketStats']);
+    Route::get('/get-staff', [AccountController::class, 'getStaffDataInfo']);
 
 
     Route::get('/ticket', [TicketController::class, 'index']);
