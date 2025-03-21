@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/ticket/{id}', [TicketController::class, 'destroy']);
     Route::get('/status', [TicketController::class, 'getStatusResolveAndUnresolved']);
     Route::get('/ticketStat', [TicketController::class, 'getTicketStatus']);
+    Route::get('/ticketStats', [TicketController::class, 'getPriorityLevelStatus']);
 
     Route::get('/myaccount', [MyAccountController::class, 'index']);
     Route::get('/myaccount/{id}', [MyAccountController::class, 'show']);

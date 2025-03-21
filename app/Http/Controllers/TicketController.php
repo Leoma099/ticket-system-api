@@ -201,5 +201,20 @@ class TicketController extends Controller
             'unresolved' => $unresolved
         ]);
     }
+
+    public function getPriorityLevelStatus()
+    {
+        $low = Ticket::where('priority_level', 1)->count(); // priority_level 1 = Low
+        $medium = Ticket::where('priority_level', 2)->count(); // priority_level 2 = Medium
+        $high = Ticket::where('priority_level', 3)->count(); // priority_level 3 = High
+        $emergency = Ticket::where('priority_level', 4)->count(); // priority_level 4 = Emergency
+
+        return response()->json([
+            'low' => $low,
+            'medium' => $medium,
+            'high' => $high,
+            'emergency' => $emergency
+        ]);
+    }
     
 };
