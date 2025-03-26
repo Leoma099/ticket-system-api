@@ -20,7 +20,7 @@ class TicketController extends Controller
         Log::info('User:', [$request->user()]); // Log the authenticated user
         Log::info('Token:', [$request->bearerToken()]); // Log the token
 
-        if (in_array($user->role, [1, 2])) {
+        if (in_array($user->role, [1])) {
             // Admin and Staff see all tickets
             $tickets = Ticket::all();
         } else {
@@ -138,6 +138,12 @@ class TicketController extends Controller
         }
     
         $ticket = Ticket::findOrFail($id);
+
+        // Ensure only admins can assign the ticket to staff
+        if (!in_array($user->role, [1, 2]))
+        { // Admin role ID
+            return response()->json(['error' => 'Unauthorized to assign ticket.'], 403);
+        }
     
         // ✅ Handle file upload BEFORE updating the ticket
         $photoPath = $request->hasFile('photo') 
@@ -202,19 +208,23 @@ class TicketController extends Controller
         ]);
     }
 
-    public function getPriorityLevelStatus()
+    public function getAssignedTickets(Request $request)
     {
-        $low = Ticket::where('priority_level', 1)->count(); // priority_level 1 = Low
-        $medium = Ticket::where('priority_level', 2)->count(); // priority_level 2 = Medium
-        $high = Ticket::where('priority_level', 3)->count(); // priority_level 3 = High
-        $emergency = Ticket::where('priority_level', 4)->count(); // priority_level 4 = Emergency
+        $user = $request->user(); // Get authenticated user
 
-        return response()->json([
-            'low' => $low,
-            'medium' => $medium,
-            'high' => $high,
-            'emergency' => $emergency
-        ]);
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Ensure the user is a staff member and can view their assigned tickets
+        if ($user->role != 2) { // Assuming role 2 is for Staff
+            return response()->json(['error' => 'Unauthorized to view assigned tickets.'], 403);
+        }
+
+        // Get tickets assigned to this staff member
+        $tickets = Ticket::where('assigned_by', $user->id)->get();
+
+        return response()->json($tickets);
     }
     
 };

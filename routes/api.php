@@ -39,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/status', [TicketController::class, 'getStatusResolveAndUnresolved']);
     Route::get('/ticketStat', [TicketController::class, 'getTicketStatus']);
     Route::get('/ticketStats', [TicketController::class, 'getPriorityLevelStatus']);
+    Route::get('/ticketAssigned', [TicketController::class, 'getAssignedTickets']);
 
     Route::get('/myaccount', [MyAccountController::class, 'index']);
     Route::get('/myaccount/{id}', [MyAccountController::class, 'show']);
