@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\TicketNotificationController;
 use App\Http\Controllers\MyAccountController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
@@ -35,6 +36,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ticket', [TicketController::class, 'store']);
     Route::post('/ticket/walkin', [TicketController::class, 'storeWalkIn']);
     Route::put('/ticket/{id}', [TicketController::class, 'update']);
+    Route::put('/ticket/{id}/pending', [TicketController::class, 'pendingStatus']);
+    Route::put('/ticket/{id}/approve', [TicketController::class, 'approveStatus']);
+    Route::put('/ticket/{id}/cancel', [TicketController::class, 'cancelStatus']);
     Route::delete('/ticket/{id}', [TicketController::class, 'destroy']);
     Route::get('/status', [TicketController::class, 'getStatusResolveAndUnresolved']);
     Route::get('/ticketStat', [TicketController::class, 'getTicketStatus']);
@@ -48,9 +52,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/myaccount/{id}', [MyAccountController::class, 'destroy']);
     Route::get('/myaccount', [MyAccountController::class, 'me']);
 
-    Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::post('/notifications', [NotificationController::class, 'store']);
-    Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::get('/ticket-notifications', [TicketNotificationController::class, 'index']);
+    Route::get('/ticket-notifications/unread/count', [TicketNotificationController::class, 'unreadCount']);
+    Route::put('/ticket-notification/{id}/read', [TicketNotificationController::class, 'markAsRead']);
 
     Route::post('logout', [AuthController::class, 'logout']);
 

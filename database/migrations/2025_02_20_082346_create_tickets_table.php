@@ -27,6 +27,12 @@ class CreateTicketsTable extends Migration
             $table->date('request_date')->useCurrent();  // Automatically set to now
             $table->date('completed_date')->nullable();  // Completed date (nullable)
             $table->tinyInteger('assigned_by');
+
+            // Added 20250326
+            $table->tinyInteger('approval_status')->default(1); // 1: FOR APPROVAL; 2: APPROVED; 3: CANCELED
+            $table->bigInteger('approved_by')->nullable();
+            $table->date('approved_date')->nullable();
+            
             $table->timestamps();
         });
     }

@@ -25,6 +25,11 @@ class Account extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function loggedTicketNotifications()
+    {
+        return $this->hasMany('App\Models\TicketNotification', 'notified_to');
+    }
+
     public function getPhotoAttribute($value)
     {
         // Ensure it only prepends "uploads/photos/" if it's not already included

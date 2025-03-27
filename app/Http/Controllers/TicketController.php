@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\Ticket;
+use App\Models\TicketNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -25,7 +27,9 @@ class TicketController extends Controller
             $tickets = Ticket::all();
         } else {
             // Clients see only their own tickets
-            $tickets = Ticket::where('account_id', $user->account->id)->get();
+            $tickets = Ticket::where('account_id', $user->account->id)
+                                ->whereIn('approval_status', [2,3])
+                                ->get();
         }        
 
         return response()->json($tickets);
@@ -78,6 +82,25 @@ class TicketController extends Controller
             'completed_date' => $request->completed_date,
         ]);
 
+        // Get Admin Roles
+        $adminRoleUsers = User::where('role', 1)->get();
+
+        foreach ($adminRoleUsers as $adminRoleUser):
+
+            // Create Ticket Notification
+            TicketNotification::create([
+                'notified_to' => $adminRoleUser->account->id,
+                'notified_by' => Auth::user()->account->id,
+                'message' => ' created a new ticket ' . $ticket->ticket_order,
+                'data' => json_encode([
+                    'module_type' => get_class($ticket),
+                    'module_id' => $ticket->id,
+                'is_read' => 0,
+                'created_by' => Auth::id()
+                ])
+            ]);
+        endforeach;
+        
         return response()->json($ticket, 201);
     }
 
@@ -118,6 +141,25 @@ class TicketController extends Controller
             'completed_date' => $request->completed_date,
         ]);
 
+        // Get Admin Roles
+        $adminRoleUsers = User::where('role', 1)->get();
+
+        foreach ($adminRoleUsers as $adminRoleUser):
+
+            // Create Ticket Notification
+            TicketNotification::create([
+                'notified_to' => $adminRoleUser->account->id,
+                'notified_by' => null,
+                'message' => ' created a new ticket ' . $ticket->ticket_order,
+                'data' => json_encode([
+                    'module_type' => get_class($ticket),
+                    'module_id' => $ticket->id,
+                'is_read' => 0,
+                'created_by' => Auth::id()
+                ])
+            ]);
+        endforeach;
+
         return response()->json($ticket, 201);
     }
 
@@ -130,6 +172,16 @@ class TicketController extends Controller
 
     // Update a ticket
     public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+
+        if ($user->role == 1) return $this->adminUpdate($request, $id);
+        else if ($user->role == 2) return $this->staffUpdate($request, $id);
+        else return abort(403, 'You cannot update this resource data.');
+    }  
+    
+    // Update a ticket
+    public function adminUpdate($request, $id)
     {
         $user = $request->user(); // Get authenticated user
 
@@ -162,9 +214,102 @@ class TicketController extends Controller
             'request_date' => $request->request_date,
             'completed_date' => $request->completed_date,
         ]);
+
+        // Get Assigned Staff
+        $assignedStaff = User::where('id', $request->assigned_by)->first();
+
+        // Create Ticket Notification
+        TicketNotification::create([
+            'notified_to' => $assignedStaff->account->id,
+            'notified_by' => Auth::id(),
+            'message' => ' assigned ' . $assignedStaff->account->full_name. ' to ticket ' . $ticket->ticket_order,
+            'data' => json_encode([
+                'module_type' => get_class($ticket),
+                'module_id' => $ticket->id,
+            'is_read' => 0, 
+            'created_by' => Auth::id()
+            ])
+        ]);
     
         return response()->json(['message' => 'Ticket updated successfully', 'ticket' => $ticket], 200);
-    }    
+    }  
+
+    // Update a ticket
+    public function staffUpdate(Request $request, $id)
+    {
+        $user = $request->user(); // Get authenticated user
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+    
+        $ticket = Ticket::findOrFail($id);
+
+        // Ensure only admins can assign the ticket to staff
+        if (!in_array($user->role, [1, 2]))
+        { // Admin role ID
+            return response()->json(['error' => 'Unauthorized to assign ticket.'], 403);
+        }
+    
+        // ✅ Handle file upload BEFORE updating the ticket
+        $photoPath = $request->hasFile('photo') 
+            ? $request->file('photo')->store('photos', 'public') 
+            : $ticket->photo; // Keep existing photo if no new file is uploaded
+    
+        $ticket->update([
+            'full_name' => $request->full_name,
+            'department' => $request->department,
+            'subject' => $request->subject,
+            'priority_level' => $request->priority_level,
+            'status' => $request->status,
+            'description' => $request->description,
+            'photo' => $photoPath, // ✅ Now $photoPath is correctly defined
+            'assigned_by' => $request->assigned_by,
+            'request_date' => $request->request_date,
+            'completed_date' => $request->completed_date,
+        ]);
+
+        // Get Admin Roles
+        $adminRoleUsers = User::where('role', 1)->get();
+
+        foreach ($adminRoleUsers as $adminRoleUser):
+
+            // Create Ticket Notification
+            TicketNotification::create([
+                'notified_to' => $adminRoleUser->account->id,
+                'notified_by' => Auth::id(),
+                'message' => ' updated ticket status to ' . $ticket->statusOptions[$ticket->status],
+                'data' => json_encode([
+                    'module_type' => get_class($ticket),
+                    'module_id' => $ticket->id,
+                'is_read' => 0,
+                'created_by' => Auth::id()
+                ])
+            ]);
+        endforeach;
+
+        if ($ticket->account_id):
+
+            // Get Ticket Creator
+            $ticketCreator = $ticket->ticketCreator;
+
+            // Create Ticket Notification
+            TicketNotification::create([
+                'notified_to' => $ticketCreator->id,
+                'notified_by' => Auth::id(),
+                'message' => ' updated ticket status to ' . $ticket->statusOptions[$ticket->status],
+                'data' => json_encode([
+                    'module_type' => get_class($ticket),
+                    'module_id' => $ticket->id,
+                'is_read' => 0,
+                'created_by' => Auth::id()
+                ])
+            ]);
+
+        endif;
+    
+        return response()->json(['message' => 'Ticket updated successfully', 'ticket' => $ticket], 200);
+    }  
     
 
     public function storePhoto($photo)
@@ -175,7 +320,30 @@ class TicketController extends Controller
     // Delete a ticket
     public function destroy($id)
     {
+        $user = Auth::user();
+
         $ticket = Ticket::findOrFail($id);
+
+        if ($ticket->account_id):
+
+            // Get Ticket Creator
+            $ticketCreator = $ticket->ticketCreator;
+
+            // Create Ticket Notification
+            TicketNotification::create([
+                'notified_to' => $ticketCreator->id,
+                'notified_by' => Auth::id(),
+                'message' => ' deleted ticket ' . $ticket->ticket_order,
+                'data' => json_encode([
+                    'module_type' => get_class($ticket),
+                    'module_id' => $ticket->id,
+                'is_read' => 0,
+                'created_by' => Auth::id()
+                ])
+            ]);
+
+        endif;
+
         $ticket->delete();
     
         return response()->json(['message' => 'Ticket deleted successfully']);
@@ -225,6 +393,121 @@ class TicketController extends Controller
         $tickets = Ticket::where('assigned_by', $user->id)->get();
 
         return response()->json($tickets);
+    }
+
+    public function getApproveDecline(Request $request)
+    {
+        $user - $request->user();
+    }
+
+    public function pendingStatus(Request $request, $id)
+    {
+        $ticket = Ticket::findOrFail($id);
+
+        if ($ticket->approval_status == 1) return abort(403, 'Ticket is already in pending status.');
+
+        $ticket->update([
+            'approval_status' => 1,
+            'approved_by' => null,
+            'approved_date'=> null,
+            'updated_by' => Auth::id(),
+        ]);
+
+        if ($ticket->account_id):
+
+            // Get Ticket Creator
+            $ticketCreator = $ticket->ticketCreator;
+
+            // Create Ticket Notification
+            TicketNotification::create([
+                'notified_to' => $ticketCreator->id,
+                'notified_by' => Auth::id(),
+                'message' => ' revert the status of ticket ' . $ticket->ticket_order .  ' to FOR APPROVAL',
+                'data' => json_encode([
+                    'module_type' => get_class($ticket),
+                    'module_id' => $ticket->id,
+                'is_read' => 0,
+                'created_by' => Auth::id()
+                ])
+            ]);
+
+        endif;
+
+        return Ticket::find($id);
+    }
+
+    public function approveStatus(Request $request, $id)
+    {
+        $ticket = Ticket::findOrFail($id);
+
+        $user = $request->user();
+
+        if ($ticket->approval_status == 2) return abort(403, 'Ticket is already approved.');
+
+        $ticket->update([
+            'approval_status' => 2,
+            'approved_by' => Auth::id(),
+            'approved_date'=> now()->format('Y-m-d'),
+            'updated_by' => Auth::id(),
+        ]);
+
+        if ($ticket->account_id):
+
+            // Get Ticket Creator
+            $ticketCreator = $ticket->ticketCreator;
+
+            // Create Ticket Notification
+            TicketNotification::create([
+                'notified_to' => $ticketCreator->id,
+                'notified_by' => Auth::id(),
+                'message' => ' approve the status of ticket ' . $ticket->ticket_order,
+                'data' => json_encode([
+                    'module_type' => get_class($ticket),
+                    'module_id' => $ticket->id,
+                'is_read' => 0,
+                'created_by' => Auth::id()
+                ])
+            ]);
+
+        endif;
+
+        return Ticket::find($id);
+    }
+
+    public function cancelStatus(Request $request, $id)
+    {
+        $ticket = Ticket::findOrFail($id);
+
+        if ($ticket->approval_status == 3) return abort(403, 'Ticket is already canceled.');
+
+        $ticket->update([
+            'approval_status' => 3,
+            'approved_by' => null,
+            'approved_date'=> null,
+            'updated_by' => Auth::id(),
+        ]);
+
+        if ($ticket->account_id):
+
+            // Get Ticket Creator
+            $ticketCreator = $ticket->ticketCreator;
+
+            // Create Ticket Notification
+            TicketNotification::create([
+                'notified_to' => $ticketCreator->id,
+                'notified_by' => Auth::id(),
+                'message' => ' cancel the status of ticket ' . $ticket->ticket_order,
+                'data' => json_encode([
+                    'module_type' => get_class($ticket),
+                    'module_id' => $ticket->id,
+                'is_read' => 0,
+                'created_by' => Auth::id()
+                ])
+            ]);
+
+        endif;
+
+        return Ticket::find($id);
     }
     
 };

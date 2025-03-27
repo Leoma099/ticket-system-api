@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateNotificationsTable extends Migration
+class CreateTicketNotificationsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,11 +13,12 @@ class CreateNotificationsTable extends Migration
      */
     public function up()
     {
-        Schema::create('notifications', function (Blueprint $table) {
+        Schema::create('ticket_notifications', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->bigInteger('account_id');
-            $table->string('title');
+            $table->bigInteger('notified_to');
+            $table->bigInteger('notified_by')->nullable();
             $table->text('message');
+            $table->text('data')->nullable();
             $table->boolean('is_read')->default(false);
             $table->timestamps();
         });
