@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Ticket;
 use App\Models\TicketNotification;
 use Illuminate\Http\Request;
@@ -80,8 +81,8 @@ class AccountController extends Controller
                 'notified_by' => Auth::user()->account->id,
                 'message' => 'you created new account',
                 'data' => json_encode([
-                    'module_type' => get_class($ticket),
-                    'module_id' => $ticket->id,
+                    'module_type' => get_class($account),
+                    'module_id' => $account->id,
                 'is_read' => 0,
                 'created_by' => Auth::id()
                 ])

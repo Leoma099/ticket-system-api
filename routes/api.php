@@ -8,6 +8,7 @@ use App\Http\Controllers\TicketNotificationController;
 use App\Http\Controllers\MyAccountController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\CustomerFeedbackController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +22,11 @@ use App\Http\Controllers\NotificationController;
 */
 
 Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/customer-feedback', [CustomerFeedbackController::class, 'index']);
+    Route::get('/customer-feedback/{id}', [CustomerFeedbackController::class, 'show']);
+    Route::post('/customer-feedback', [CustomerFeedbackController::class, 'store']);
+    Route::get('/satisfaction-score', [CustomerFeedbackController::class, 'getCustomerSatisfactionScore']);
 
     Route::get('/account', [AccountController::class, 'index']);
     Route::get('/account/{id}', [AccountController::class, 'show']);
@@ -42,8 +48,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/ticket/{id}', [TicketController::class, 'destroy']);
     Route::get('/status', [TicketController::class, 'getStatusResolveAndUnresolved']);
     Route::get('/ticketStat', [TicketController::class, 'getTicketStatus']);
-    Route::get('/ticketStats', [TicketController::class, 'getPriorityLevelStatus']);
+    Route::get('/ticketStats', [TicketController::class, 'getTicketStatus']);
+    Route::get('/priorityStats', [TicketController::class, 'getPriority']);
     Route::get('/ticketAssigned', [TicketController::class, 'getAssignedTickets']);
+    Route::get('/ticketSubmittedCountedMonth', [TicketController::class, 'getMonthlySubmittedTickets']);
 
     Route::get('/myaccount', [MyAccountController::class, 'index']);
     Route::get('/myaccount/{id}', [MyAccountController::class, 'show']);

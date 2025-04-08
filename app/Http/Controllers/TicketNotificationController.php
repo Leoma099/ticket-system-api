@@ -12,6 +12,7 @@ class TicketNotificationController extends Controller
     {
         $user = Auth::user();
 
+        // Ensure the user has an associated account
         $account = $user->account;
 
         return $account->loggedTicketNotifications()->where('is_read', 0)->orderBy('created_at', 'desc')->paginate(10000);

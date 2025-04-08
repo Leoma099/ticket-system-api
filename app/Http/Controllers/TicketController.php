@@ -8,7 +8,6 @@ use App\Models\TicketNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Models\SchoolNumber;
 
 class TicketController extends Controller
 {
@@ -71,7 +70,6 @@ class TicketController extends Controller
             'subject' => 'required|integer',
             'priority_level' => 'required|integer',
             'description' => 'nullable|string',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'request_date' => 'required|date',
         ]);
 
@@ -88,10 +86,10 @@ class TicketController extends Controller
             'priority_level' => $request->priority_level,
             'status' => 1,
             'description' => $request->description,
-            'photo' => $photoPath,
             'assigned_by' => 0,
             'request_date' => $request->request_date,
             'completed_date' => $request->completed_date,
+            'completed_time' => $request->completed_time,
         ]);
 
         // Get Admin Roles
@@ -103,7 +101,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $adminRoleUser->account->id,
                 'notified_by' => Auth::user()->account->id,
-                'message' => $ticket->full_name . 'created a new ticket ' . $ticket->ticket_order,
+                'message' => $ticket->full_name  . ' you created a new ticket ' . $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -135,41 +133,49 @@ class TicketController extends Controller
         return response()->json($ticket, 201);
     }
 
-
-    public function storeWalkIn(Request $request)
+    public function storeWalkin(Request $request)
     {
+        // Ensure user is authenticated
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Ensure user has an associated account
+        if (!$user->account) {
+            return response()->json(['error' => 'User has no account associated.'], 400);
+        }
+
+        // Debugging Logs
+        Log::info('Authenticated User:', [$user]);
+        Log::info('User Account:', [$user->account]);
+
         $request->validate([
-            'account_id' => 'nullable',
             'full_name' => 'required',
             'department' => 'required|integer',
             'subject' => 'required|integer',
             'priority_level' => 'required|integer',
             'description' => 'nullable|string',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'assigned_by' => 'required|integer',
             'request_date' => 'required|date',
         ]);
 
         // Handle file upload
-        if ($request->hasFile('photo')) {
-            $photoPath = $request->file('photo')->store('photos', 'public');  // Store file
-        } else {
-            $photoPath = null;  // If no photo, set as null
-        }
+        $photoPath = $request->hasFile('photo') ? $request->file('photo')->store('photos', 'public') : null;
 
+        // Fix the account_id assignment
         $ticket = Ticket::create([
-            'account_id' => $request->account_id,
+            'account_id' => $user->account->id, // ✅ Fixed!
             'ticket_order' => $request->ticket_order,
             'full_name' => $request->full_name,
             'department' => $request->department,
             'subject' => $request->subject,
             'priority_level' => $request->priority_level,
-            'status' => $request->status,
+            'status' => 1,
             'description' => $request->description,
-            'photo' => $photoPath,
-            'assigned_by' => $request->assigned_by,
+            'assigned_by' => 0,
             'request_date' => $request->request_date,
             'completed_date' => $request->completed_date,
+            'completed_time' => $request->completed_time,
         ]);
 
         // Get Admin Roles
@@ -180,8 +186,8 @@ class TicketController extends Controller
             // Create Ticket Notification
             TicketNotification::create([
                 'notified_to' => $adminRoleUser->account->id,
-                'notified_by' => null,
-                'message' => 'you created a new ticket ' . $ticket->ticket_order,
+                'notified_by' => Auth::user()->account->id,
+                'message' => ' you created a new ticket ' . $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -190,7 +196,7 @@ class TicketController extends Controller
                 ])
             ]);
         endforeach;
-
+        
         return response()->json($ticket, 201);
     }
 
@@ -227,11 +233,7 @@ class TicketController extends Controller
         { // Admin role ID
             return response()->json(['error' => 'Unauthorized to assign ticket.'], 403);
         }
-    
-        // ✅ Handle file upload BEFORE updating the ticket
-        $photoPath = $request->hasFile('photo') 
-            ? $request->file('photo')->store('photos', 'public') 
-            : $ticket->photo; // Keep existing photo if no new file is uploaded
+
     
         $ticket->update([
             'full_name' => $request->full_name,
@@ -240,10 +242,10 @@ class TicketController extends Controller
             'priority_level' => $request->priority_level,
             'status' => $request->status,
             'description' => $request->description,
-            'photo' => $photoPath, // ✅ Now $photoPath is correctly defined
             'assigned_by' => $request->assigned_by,
             'request_date' => $request->request_date,
             'completed_date' => $request->completed_date,
+            'completed_time' => $request->completed_time,
         ]);
 
         // Get Assigned Staff
@@ -253,7 +255,7 @@ class TicketController extends Controller
         TicketNotification::create([
             'notified_to' => $assignedStaff->account->id,
             'notified_by' => Auth::id(),
-            'message' => 'you assigned ' . $assignedStaff->account->full_name. ' to ticket ' . $ticket->ticket_order,
+            'message' => ' you have been assigned to ' . $ticket->ticket_order . ' by the admin. ',
             'data' => json_encode([
                 'module_type' => get_class($ticket),
                 'module_id' => $ticket->id,
@@ -281,11 +283,7 @@ class TicketController extends Controller
         { // Admin role ID
             return response()->json(['error' => 'Unauthorized to assign ticket.'], 403);
         }
-    
-        // ✅ Handle file upload BEFORE updating the ticket
-        $photoPath = $request->hasFile('photo') 
-            ? $request->file('photo')->store('photos', 'public') 
-            : $ticket->photo; // Keep existing photo if no new file is uploaded
+
     
         $ticket->update([
             'full_name' => $request->full_name,
@@ -294,10 +292,10 @@ class TicketController extends Controller
             'priority_level' => $request->priority_level,
             'status' => $request->status,
             'description' => $request->description,
-            'photo' => $photoPath, // ✅ Now $photoPath is correctly defined
             'assigned_by' => $request->assigned_by,
             'request_date' => $request->request_date,
             'completed_date' => $request->completed_date,
+            'completed_time' => $request->completed_time,
         ]);
 
         // Get Admin Roles
@@ -309,7 +307,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $adminRoleUser->account->id,
                 'notified_by' => Auth::id(),
-                'message' => 'you updated ticket status to ' . $ticket->statusOptions[$ticket->status],
+                'message' => 'you updated ticket',
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -328,7 +326,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $ticketCreator->id,
                 'notified_by' => Auth::id(),
-                'message' => ' updated ticket status to ' . $ticket->statusOptions[$ticket->status],
+                'message' => 'you updated ticket statuss',
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -404,6 +402,21 @@ class TicketController extends Controller
             'inProgress' => $inProgress,
             'resolved' => $resolved,
             'unresolved' => $unresolved
+        ]);
+    }
+
+    public function getPriority()
+    {
+        $low = Ticket::where('priority_level', 1)->count(); // status 3 = Resolved
+        $medium = Ticket::where('priority_level', 2)->count(); // status 4 = Unresolved
+        $high = Ticket::where('priority_level', 3)->count(); // status 4 = Unresolved
+        $emergency = Ticket::where('priority_level', 4)->count(); // status 4 = Unresolved
+
+        return response()->json([
+            'low' => $low,
+            'medium' => $medium,
+            'high' => $high,
+            'emergency' => $emergency
         ]);
     }
 
@@ -486,7 +499,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $ticketCreator->id,
                 'notified_by' => Auth::id(),
-                'message' => 'you approve the status of ticket ' . $ticket->ticket_order,
+                'message' => 'you approve the status of ticket '  . $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -534,6 +547,26 @@ class TicketController extends Controller
         endif;
 
         return Ticket::find($id);
+    }
+
+    public function getMonthlySubmittedTickets(Request $request)
+    {
+        $year = $request->input('year', now()->year);
+    
+        $monthlyData = [];
+    
+        for ($month = 1; $month <= 12; $month++) {
+            $monthlyCount = Ticket::whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->count();
+    
+            $monthlyData[] = $monthlyCount;
+        }
+    
+        return response()->json([
+            'monthly' => $monthlyData,
+            'year' => $year,
+        ]);
     }
     
 };
