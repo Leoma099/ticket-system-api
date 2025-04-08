@@ -23,6 +23,9 @@ class CreateAccountsTable extends Migration
             $table->string('mobile_number');
             $table->longText('photo')->nullable();
 
+            $table->string('department');
+            $table->string('position');
+
             $table->timestamps();
         });
     }

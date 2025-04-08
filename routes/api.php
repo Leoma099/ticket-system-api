@@ -55,6 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/ticket-notifications', [TicketNotificationController::class, 'index']);
     Route::get('/ticket-notifications/unread/count', [TicketNotificationController::class, 'unreadCount']);
     Route::put('/ticket-notification/{id}/read', [TicketNotificationController::class, 'markAsRead']);
+    Route::post('/mark-notifications-read', [TicketNotificationController::class, 'markAllAsRead']);
 
     Route::post('logout', [AuthController::class, 'logout']);
 

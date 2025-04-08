@@ -17,7 +17,10 @@ class Account extends Model
         'date_of_birth',
         'address',
         'mobile_number',
-        'photo'
+        'photo',
+
+        'department',
+        'position',
     ];
 
     public function user()

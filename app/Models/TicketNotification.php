@@ -17,27 +17,18 @@ class TicketNotification extends Model
 
     public function notifiedTo()
     {
-        return $this->belongsTo('App\Models\Account', 'notified_to');
+        return $this->belongsTo(Account::class, 'notified_to');
     }
 
     public function notifiedBy()
     {
-        return $this->belongsTo('App\Models\Account', 'notified_by');
+        return $this->belongsTo(Account::class, 'notified_by');
     }
 
-    public function toArray()
+    public static function markAsReadByUser($userId)
     {
-        return [
-            'id' => $this->id,
-            'message' => $this->message,
-            'data' => $this->data
-                ? json_decode($this->data)
-                : null,
-            'is_read' => $this->is_read,
-            'notified_by' => [
-                'id' => $this->notified_by,
-                'name' => $this->notifiedBy->full_name
-            ],
-        ];
+        return static::where('notified_to', $userId)
+                    ->where('is_read', false)
+                    ->update(['is_read' => true]);
     }
 }

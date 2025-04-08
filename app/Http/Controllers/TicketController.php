@@ -24,14 +24,26 @@ class TicketController extends Controller
 
         if (in_array($user->role, [1])) {
             // Admin and Staff see all tickets
-            $tickets = Ticket::all();
+            $query = Ticket::query();
         } else {
             // Clients see only their own tickets
-            $tickets = Ticket::where('account_id', $user->account->id)
-                                ->whereIn('approval_status', [2,3])
-                                ->get();
-        }        
-
+            $query = Ticket::where('account_id', $user->account->id)
+                           ->whereIn('approval_status', [2, 3]);
+        }
+        
+        if ($request->has('search')) {
+            $search = $request->search;
+            $columns = ['ticket_order', 'request_date', 'completed_date'];
+        
+            $query->where(function ($q) use ($columns, $search) {
+                foreach ($columns as $column) {
+                    $q->orWhere($column, 'LIKE', "%{$search}%");
+                }
+            });
+        }
+        
+        $tickets = $query->get();
+        
         return response()->json($tickets);
     }
 
@@ -91,7 +103,26 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $adminRoleUser->account->id,
                 'notified_by' => Auth::user()->account->id,
-                'message' => ' created a new ticket ' . $ticket->ticket_order,
+                'message' => $ticket->full_name . 'created a new ticket ' . $ticket->ticket_order,
+                'data' => json_encode([
+                    'module_type' => get_class($ticket),
+                    'module_id' => $ticket->id,
+                'is_read' => 0,
+                'created_by' => Auth::id()
+                ])
+            ]);
+        endforeach;
+
+        // Get Client Roles
+        $clientRoleUsers = User::where('role', 3)->get();
+
+        foreach ($clientRoleUsers as $clientRoleUser):
+
+            // Create Ticket Notification
+            TicketNotification::create([
+                'notified_to' => $clientRoleUser->account->id,
+                'notified_by' => Auth::user()->account->id,
+                'message' => ' you created a new ticket ' . $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -150,7 +181,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $adminRoleUser->account->id,
                 'notified_by' => null,
-                'message' => ' created a new ticket ' . $ticket->ticket_order,
+                'message' => 'you created a new ticket ' . $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -222,7 +253,7 @@ class TicketController extends Controller
         TicketNotification::create([
             'notified_to' => $assignedStaff->account->id,
             'notified_by' => Auth::id(),
-            'message' => ' assigned ' . $assignedStaff->account->full_name. ' to ticket ' . $ticket->ticket_order,
+            'message' => 'you assigned ' . $assignedStaff->account->full_name. ' to ticket ' . $ticket->ticket_order,
             'data' => json_encode([
                 'module_type' => get_class($ticket),
                 'module_id' => $ticket->id,
@@ -278,7 +309,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $adminRoleUser->account->id,
                 'notified_by' => Auth::id(),
-                'message' => ' updated ticket status to ' . $ticket->statusOptions[$ticket->status],
+                'message' => 'you updated ticket status to ' . $ticket->statusOptions[$ticket->status],
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -395,11 +426,6 @@ class TicketController extends Controller
         return response()->json($tickets);
     }
 
-    public function getApproveDecline(Request $request)
-    {
-        $user - $request->user();
-    }
-
     public function pendingStatus(Request $request, $id)
     {
         $ticket = Ticket::findOrFail($id);
@@ -422,7 +448,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $ticketCreator->id,
                 'notified_by' => Auth::id(),
-                'message' => ' revert the status of ticket ' . $ticket->ticket_order .  ' to FOR APPROVAL',
+                'message' => ' you re-assigned the status of ticket ' .  $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -460,7 +486,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $ticketCreator->id,
                 'notified_by' => Auth::id(),
-                'message' => ' approve the status of ticket ' . $ticket->ticket_order,
+                'message' => 'you approve the status of ticket ' . $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -496,7 +522,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $ticketCreator->id,
                 'notified_by' => Auth::id(),
-                'message' => ' cancel the status of ticket ' . $ticket->ticket_order,
+                'message' => 'you reject the status of ticket ' . $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,

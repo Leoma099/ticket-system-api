@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Account;
 use App\Models\User;
 use App\Models\Ticket;
+use App\Models\TicketNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -12,7 +13,18 @@ class AccountController extends Controller
 {
     public function index(Request $request)
     {
-        $accounts = Account::with('user')->get();
+        $query = Account::with('user');
+    
+        if ($request->has('search')) {
+            $search = $request->search;
+    
+            $query->where(function ($q) use ($search) {
+                $q->where('full_name', 'LIKE', "%{$search}%");
+            });
+        }
+    
+        $accounts = $query->get();
+    
         return response()->json($accounts);
     }
 
@@ -27,6 +39,9 @@ class AccountController extends Controller
             'password' => 'required|min:6',
             'photo' => 'nullable|image',
             'date_of_birth' => 'required|date',
+
+            'department' => 'required',
+            'position' => 'required',
         ]);
 
         // Handle file upload
@@ -49,7 +64,29 @@ class AccountController extends Controller
             'mobile_number' => $request->mobile_number,
             'photo' => $photoPath, // Store the uploaded file path
             'date_of_birth' => $request->date_of_birth,
+
+            'department' => $request->department,
+            'position' => $request->position,
         ]);
+
+        // Get Admin Roles
+        $adminRoleUsers = User::where('role', 1)->get();
+
+        foreach ($adminRoleUsers as $adminRoleUser):
+
+            // Create Ticket Notification
+            TicketNotification::create([
+                'notified_to' => $adminRoleUser->account->id,
+                'notified_by' => Auth::user()->account->id,
+                'message' => 'you created new account',
+                'data' => json_encode([
+                    'module_type' => get_class($ticket),
+                    'module_id' => $ticket->id,
+                'is_read' => 0,
+                'created_by' => Auth::id()
+                ])
+            ]);
+        endforeach;
 
         return response()->json([
             'message' => 'Account and user and school number created successfully',
@@ -85,7 +122,10 @@ class AccountController extends Controller
             'email' => $request->email,
             'address' => $request->address,
             'mobile_number' => $request->mobile_number,
-            'date_of_birth' => $request->date_of_birth
+            'date_of_birth' => $request->date_of_birth,
+
+            'department' => $request->department,
+            'position' => $request->position
         ]);
         
         return response()->json(['message' => 'Account updated successfully', 'account' => $account]);
