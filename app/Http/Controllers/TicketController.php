@@ -66,11 +66,11 @@ class TicketController extends Controller
 
         $request->validate([
             'full_name' => 'required',
-            'department' => 'required|integer',
-            'subject' => 'required|integer',
-            'priority_level' => 'required|integer',
-            'description' => 'nullable|string',
-            'request_date' => 'required|date',
+            'department' => 'required',
+            'subject' => 'required',
+            'priority_level' => 'required',
+            'description' => 'nullable',
+            'request_date' => 'required',
         ]);
 
         // Handle file upload
@@ -101,7 +101,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $adminRoleUser->account->id,
                 'notified_by' => Auth::user()->account->id,
-                'message' => $ticket->full_name  . ' you created a new ticket ' . $ticket->ticket_order,
+                'message' => $ticket->full_name  . ' has created a new ticket ' . $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -326,7 +326,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $ticketCreator->id,
                 'notified_by' => Auth::id(),
-                'message' => 'you updated ticket statuss',
+                'message' => 'staff updated your ticket status ' . $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,
@@ -499,7 +499,7 @@ class TicketController extends Controller
             TicketNotification::create([
                 'notified_to' => $ticketCreator->id,
                 'notified_by' => Auth::id(),
-                'message' => 'you approve the status of ticket '  . $ticket->ticket_order,
+                'message' => 'admin approve the status of ticket '  . $ticket->ticket_order,
                 'data' => json_encode([
                     'module_type' => get_class($ticket),
                     'module_id' => $ticket->id,

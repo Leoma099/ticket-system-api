@@ -31,21 +31,21 @@ class CustomerFeedbackController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-    
+
         if (!$user) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-    
+
         if (!$user->account) {
             return response()->json(['error' => 'User has no account associated.'], 400);
         }
-    
+
         // Validate incoming request data
         $request->validate([
             'rate' => 'required|integer|min:1|max:5',
             'comment' => 'required|string',
         ]);
-    
+
         // Create the customer feedback
         $customerFeedback = CustomerFeedback::create([
             'account_id' => $user->account->id,
@@ -55,16 +55,16 @@ class CustomerFeedbackController extends Controller
             'assigned_by' => $request->assigned_by,
             'completed_date' => $request->completed_date,
             'completed_time' => $request->completed_time,
-            'rate' => 0,
+            'rate' => $request->rate, // ✅ FIXED HERE
             'comment' => $request->comment,
         ]);
-    
-        // Return the response with the feedback data
+
         return response()->json([
             'message' => 'Customer Feedback submitted successfully',
             'customerFeedback' => $customerFeedback
         ], 201);
-    }    
+    }
+    
 
     public function show($id)
     {
@@ -76,7 +76,7 @@ class CustomerFeedbackController extends Controller
     public function getCustomerSatisfactionScore()
     {
         $total = CustomerFeedback::count();
-    
+
         if ($total === 0) {
             return response()->json([
                 'positive' => 0,
@@ -84,16 +84,19 @@ class CustomerFeedbackController extends Controller
                 'negative' => 0,
             ]);
         }
-    
-        $positive = CustomerFeedback::where('rate', '>=', 3)->count(); // 4 & 5
-        $neutral = CustomerFeedback::where('rate', 2)->count();        // 3
-        $negative = CustomerFeedback::where('rate', '<', 1)->count();  // 1 & 2
-    
+
+        // ✅ CHANGED: use string or casted values to ensure matches
+        $positive = CustomerFeedback::where('rate', 3)->count(); // Excellent
+        $neutral  = CustomerFeedback::where('rate', 2)->count();  // Good
+        $negative = CustomerFeedback::where('rate', 1)->count();  // Bad
+
         return response()->json([
             'positive' => round(($positive / $total) * 100, 2),
             'neutral' => round(($neutral / $total) * 100, 2),
             'negative' => round(($negative / $total) * 100, 2),
         ]);
     }
+
+    
     
 }
