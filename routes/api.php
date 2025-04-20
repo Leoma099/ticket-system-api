@@ -53,6 +53,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/ticketAssigned', [TicketController::class, 'getAssignedTickets']);
     Route::get('/ticketSubmittedCountedMonth', [TicketController::class, 'getMonthlySubmittedTickets']);
 
+    Route::post('/ticket/{id}', [TicketController::class, 'storeReason']);
+
+
     Route::get('/myaccount', [MyAccountController::class, 'index']);
     Route::get('/myaccount/{id}', [MyAccountController::class, 'show']);
     Route::post('/myaccount', [MyAccountController::class, 'store']);

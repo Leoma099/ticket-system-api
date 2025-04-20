@@ -40,7 +40,6 @@ class AccountController extends Controller
             'password' => 'required|min:6',
             'photo' => 'nullable|image',
             'date_of_birth' => 'required|date',
-
             'department' => 'required',
             'position' => 'required',
         ]);
@@ -107,7 +106,6 @@ class AccountController extends Controller
         return response()->json($account);
     }
     
-
     public function update(Request $request, $id)
     {
         $user = $request->user(); // Get authenticated user

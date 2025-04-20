@@ -32,7 +32,7 @@ class TicketController extends Controller
         
         if ($request->has('search')) {
             $search = $request->search;
-            $columns = ['ticket_order', 'request_date', 'completed_date'];
+            $columns = ['full_name','ticket_order', 'request_date', 'completed_date'];
         
             $query->where(function ($q) use ($columns, $search) {
                 foreach ($columns as $column) {
@@ -70,11 +70,15 @@ class TicketController extends Controller
             'subject' => 'required',
             'priority_level' => 'required',
             'description' => 'nullable',
+            'photo' => 'nullable|image',
             'request_date' => 'required',
         ]);
 
         // Handle file upload
-        $photoPath = $request->hasFile('photo') ? $request->file('photo')->store('photos', 'public') : null;
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('uploads/photos', 'public');
+        }
 
         // Fix the account_id assignment
         $ticket = Ticket::create([
@@ -84,12 +88,14 @@ class TicketController extends Controller
             'department' => $request->department,
             'subject' => $request->subject,
             'priority_level' => $request->priority_level,
+            'photo' => $photoPath,
             'status' => 1,
             'description' => $request->description,
             'assigned_by' => 0,
             'request_date' => $request->request_date,
             'completed_date' => $request->completed_date,
             'completed_time' => $request->completed_time,
+            'reason' => $request->reason,
         ]);
 
         // Get Admin Roles
@@ -160,7 +166,10 @@ class TicketController extends Controller
         ]);
 
         // Handle file upload
-        $photoPath = $request->hasFile('photo') ? $request->file('photo')->store('photos', 'public') : null;
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('uploads/photos', 'public');
+        }
 
         // Fix the account_id assignment
         $ticket = Ticket::create([
@@ -171,6 +180,7 @@ class TicketController extends Controller
             'subject' => $request->subject,
             'priority_level' => $request->priority_level,
             'status' => 1,
+            'photo' => $photoPath,
             'description' => $request->description,
             'assigned_by' => 0,
             'request_date' => $request->request_date,
@@ -390,13 +400,30 @@ class TicketController extends Controller
         ]);
     }
 
-    public function getTicketStatus()
+    public function getTicketStatus(Request $request)
     {
-        $pending = Ticket::where('status', 1)->count(); // status 3 = Resolved
-        $inProgress = Ticket::where('status', 2)->count(); // status 4 = Unresolved
-        $resolved = Ticket::where('status', 3)->count(); // status 4 = Unresolved
-        $unresolved = Ticket::where('status', 4)->count(); // status 4 = Unresolved
-
+        $user = $request->user();
+    
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+    
+        // Admin sees all tickets
+        if ($user->role == 1) {
+            $pending = Ticket::where('status', 1)->count();
+            $inProgress = Ticket::where('status', 2)->count();
+            $resolved = Ticket::where('status', 3)->count();
+            $unresolved = Ticket::where('status', 4)->count();
+        }
+    
+        // Staff sees only approved and assigned tickets
+        elseif ($user->role == 2) {
+            $pending = Ticket::where('assigned_by', $user->id)->where('approval_status', 2)->where('status', 1)->count();
+            $inProgress = Ticket::where('assigned_by', $user->id)->where('approval_status', 2)->where('status', 2)->count();
+            $resolved = Ticket::where('assigned_by', $user->id)->where('approval_status', 2)->where('status', 3)->count();
+            $unresolved = Ticket::where('assigned_by', $user->id)->where('approval_status', 2)->where('status', 4)->count();
+        }
+    
         return response()->json([
             'pending' => $pending,
             'inProgress' => $inProgress,
@@ -405,20 +432,46 @@ class TicketController extends Controller
         ]);
     }
 
-    public function getPriority()
+    public function getPriority(Request $request)
     {
-        $low = Ticket::where('priority_level', 1)->count(); // status 3 = Resolved
-        $medium = Ticket::where('priority_level', 2)->count(); // status 4 = Unresolved
-        $high = Ticket::where('priority_level', 3)->count(); // status 4 = Unresolved
-        $emergency = Ticket::where('priority_level', 4)->count(); // status 4 = Unresolved
+        $user = $request->user(); // Get authenticated user
+
+        // Admin sees all tickets, regardless of their status
+        if ($user->role == 1) {
+            $low = Ticket::where('priority_level', 1)->count();
+            $medium = Ticket::where('priority_level', 2)->count();
+            $high = Ticket::where('priority_level', 3)->count();
+            $emergency = Ticket::where('priority_level', 4)->count();
+        } 
+
+        // Staff sees only approved and assigned tickets
+        elseif ($user->role == 2) {
+            $low = Ticket::where('priority_level', 1)
+                        ->where('approval_status', 2) // Approved
+                        ->where('assigned_by', $user->id) // Assigned to the staff
+                        ->count();
+            $medium = Ticket::where('priority_level', 2)
+                            ->where('approval_status', 2)
+                            ->where('assigned_by', $user->id)
+                            ->count();
+            $high = Ticket::where('priority_level', 3)
+                        ->where('approval_status', 2)
+                        ->where('assigned_by', $user->id)
+                        ->count();
+            $emergency = Ticket::where('priority_level', 4)
+                            ->where('approval_status', 2)
+                            ->where('assigned_by', $user->id)
+                            ->count();
+        }
 
         return response()->json([
             'low' => $low,
             'medium' => $medium,
             'high' => $high,
-            'emergency' => $emergency
+            'emergency' => $emergency,
         ]);
     }
+
 
     public function getAssignedTickets(Request $request)
     {
@@ -433,8 +486,10 @@ class TicketController extends Controller
             return response()->json(['error' => 'Unauthorized to view assigned tickets.'], 403);
         }
 
-        // Get tickets assigned to this staff member
-        $tickets = Ticket::where('assigned_by', $user->id)->get();
+        // Show only approved tickets assigned to this staff
+        $tickets = Ticket::where('assigned_by', $user->id)
+                        ->where('approval_status', 2)
+                        ->get();
 
         return response()->json($tickets);
     }
@@ -517,6 +572,8 @@ class TicketController extends Controller
     {
         $ticket = Ticket::findOrFail($id);
 
+        $user = $request->user();
+
         if ($ticket->approval_status == 3) return abort(403, 'Ticket is already canceled.');
 
         $ticket->update([
@@ -525,6 +582,9 @@ class TicketController extends Controller
             'approved_date'=> null,
             'updated_by' => Auth::id(),
         ]);
+
+        $ticket->reason = $request->input('reason');
+        $ticket->save();
 
         if ($ticket->account_id):
 
@@ -567,6 +627,21 @@ class TicketController extends Controller
             'monthly' => $monthlyData,
             'year' => $year,
         ]);
+    }
+
+    // Only who are declined and give a reason
+    public function storeReason(Request $request, $id)
+    {
+        // Find the ticket by id
+        $ticket = Ticket::findOrFail($id);
+
+        // Save the reason and change the status
+        $ticket->reason = $request->input('reason');
+        $ticket->approval_status = 3; // **Touched: Set status to 4 for declined**
+        $ticket->save();
+
+        // Return a success response
+        return response()->json(['message' => 'Ticket declined successfully.']);
     }
     
 };

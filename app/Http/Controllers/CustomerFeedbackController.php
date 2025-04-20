@@ -15,18 +15,17 @@ class CustomerFeedbackController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-
+    
         if ($user->role === 1) {
             $customerFeedback = CustomerFeedback::all();
         } elseif ($user->role === 2) {
-            // $customerFeedback = CustomerFeedback::where('assigned_by', $user->name)->get();
-            $customerFeedback = CustomerFeedback::all();
+            $customerFeedback = CustomerFeedback::where('assigned_by', $user->id)->get();
         } else {
             $customerFeedback = CustomerFeedback::where('account_id', $user->account->id)->get();
         }
-
+    
         return response()->json($customerFeedback);
-    }
+    } 
 
     public function store(Request $request)
     {
@@ -64,7 +63,6 @@ class CustomerFeedbackController extends Controller
             'customerFeedback' => $customerFeedback
         ], 201);
     }
-    
 
     public function show($id)
     {
@@ -73,30 +71,51 @@ class CustomerFeedbackController extends Controller
         return response()->json($customerFeedback);
     }
 
-    public function getCustomerSatisfactionScore()
+    public function getCustomerSatisfactionScore(Request $request)
     {
-        $total = CustomerFeedback::count();
+        $user = $request->user();
 
-        if ($total === 0) {
-            return response()->json([
-                'positive' => 0,
-                'neutral' => 0,
-                'negative' => 0,
-            ]);
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        // ✅ CHANGED: use string or casted values to ensure matches
-        $positive = CustomerFeedback::where('rate', 3)->count(); // Excellent
-        $neutral  = CustomerFeedback::where('rate', 2)->count();  // Good
-        $negative = CustomerFeedback::where('rate', 1)->count();  // Bad
+        // For Admin (role == 1)
+        if ($user->role == 1) {
+            $total = CustomerFeedback::count();
+
+            if ($total === 0) {
+                return response()->json([
+                    'positive' => 0,
+                    'neutral' => 0,
+                    'negative' => 0,
+                ]);
+            }
+
+            $positive = CustomerFeedback::where('rate', 3)->count();
+            $neutral  = CustomerFeedback::where('rate', 2)->count();
+            $negative = CustomerFeedback::where('rate', 1)->count();
+        }
+        // For Staff (role == 2)
+        else {
+            $total = CustomerFeedback::where('assigned_by', $user->id)->count();
+
+            if ($total === 0) {
+                return response()->json([
+                    'positive' => 0,
+                    'neutral' => 0,
+                    'negative' => 0,
+                ]);
+            }
+
+            $positive = CustomerFeedback::where('assigned_by', $user->id)->where('rate', 3)->count();
+            $neutral  = CustomerFeedback::where('assigned_by', $user->id)->where('rate', 2)->count();
+            $negative = CustomerFeedback::where('assigned_by', $user->id)->where('rate', 1)->count();
+        }
 
         return response()->json([
             'positive' => round(($positive / $total) * 100, 2),
-            'neutral' => round(($neutral / $total) * 100, 2),
+            'neutral'  => round(($neutral / $total) * 100, 2),
             'negative' => round(($negative / $total) * 100, 2),
         ]);
     }
-
-    
-    
 }

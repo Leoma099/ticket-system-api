@@ -18,6 +18,7 @@ class Ticket extends Model
         'priority_level',
         'status',
         'description',
+        'photo',
         'request_date',
         'completed_date',
         'completed_time',
@@ -25,6 +26,7 @@ class Ticket extends Model
         'approval_status',
         'approved_by',
         'approved_date',
+        'reason'
     ];
 
     public function account()
@@ -45,6 +47,11 @@ class Ticket extends Model
     public function customerFeedback()
     {
         return $this->hasOne(CustomerFeedback::class, 'ticket_id');
+    }
+
+    public function reason()
+    {
+        return $this->hasOne(Reason::class, 'ticket_id');
     }
 
 
